@@ -3,6 +3,8 @@ extern crate tini;
 use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::prelude::*;
+use std::{thread, time};
+use std::mem;
 use tini::Ini;
 
 #[derive(Debug)]
@@ -50,9 +52,28 @@ impl Configuration {
             illuminance
         }
     }
+
+    fn set(&mut self, value: u32) {
+        if value >= self.min_backlight && value <= self.min_backlight {
+            write!(self.backlight, "{}", value);
+        }
+    }
+
+    fn get(&mut self) -> u32 {
+        let mut buffer = [0; 4];
+        self.illuminance.read(&mut buffer[..]);
+        unsafe {
+            mem::transmute::<[u8; 4], u32>(buffer)
+        }
+    }
 }
 
 fn main() {
-    let a = Configuration::init("config.ini");
-    println!("{:?}", a);
+    let sleep_time = time::Duration::from_millis(100);
+    let mut config = Configuration::init("config.ini");
+    loop {
+        let val = config.get();
+        println!("val = {}", val);
+        thread::sleep(sleep_time);
+    }
 }
