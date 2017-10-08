@@ -54,7 +54,7 @@ impl Configuration {
     }
 
     fn set(&mut self, value: u32) {
-        if value >= self.min_backlight && value <= self.min_backlight {
+        if value >= self.min_backlight && value <= self.max_backlight as u32 {
             write!(self.backlight, "{}", value);
         }
     }
