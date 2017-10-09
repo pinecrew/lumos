@@ -1,7 +1,8 @@
 [package]
 name = "lumos"
 version = "0.1.0"
-authors = ["Alexey Golubev <dr.freecx@gmail.com>"]
+authors = ["Alexey Golubev <dr.freecx@gmail.com>",
+           "Vova Abdrakhmanov <369565@gmail.com>"]
 
 [dependencies]
 tini = "0.2"
