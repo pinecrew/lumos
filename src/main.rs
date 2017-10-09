@@ -16,6 +16,8 @@ struct Configuration {
     max_illuminance: i32,
     backlight: File,
     illuminance: File,
+    transition_step: time::Duration,
+    transition_sleep: time::Duration,
 }
 
 impl Configuration {
@@ -43,6 +45,8 @@ impl Configuration {
                                     .unwrap();
         let illuminance_file: String = config.get("config", "illuminance_file").unwrap();
         let illuminance = File::open(illuminance_file).unwrap();
+        let transition_step = time::Duration::from_millis(config.get("transition", "step").unwrap());
+        let transition_sleep = time::Duration::from_millis(config.get("transition", "sleep").unwrap());
 
         Configuration {
             max_backlight,
@@ -50,7 +54,9 @@ impl Configuration {
             max_illuminance,
             min_illuminance,
             backlight,
-            illuminance
+            illuminance,
+            transition_step,
+            transition_sleep,
         }
     }
 
@@ -82,13 +88,10 @@ fn transition(x: f32, center: f32, range: f32) -> f32 {
 }
 
 fn main() {
-    let sleep_time = time::Duration::from_millis(100);
-    let step_time = time::Duration::from_millis(50);
     let mut config = Configuration::init("config.ini");
-    let mut start = 0;
     let mut end = 0;
     loop {
-        start = end;
+        let start = end;
         end = config.get();
         let mut steps = cmp::min(30, (end - start).abs() / 10);
         println!("steps = {}", steps);
@@ -100,12 +103,12 @@ fn main() {
                 let bv = config.lumos_to_backlight(v);
                 println!("bv = {}", bv);
                 config.set(bv);
-                thread::sleep(step_time);
+                thread::sleep(config.transition_step);
             }
         } else {
             let value = config.lumos_to_backlight(end);
             config.set(value);
         }
-        thread::sleep(sleep_time);
+        thread::sleep(config.transition_sleep);
     }
 }
