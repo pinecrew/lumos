@@ -72,8 +72,8 @@ impl Configuration {
     }
 
     fn lumos_to_backlight(&self, v: i32) -> i32 {
-        let x = (v - self.min_illuminance) / (self.max_illuminance - self.min_illuminance);
-        (self.min_backlight + (self.max_backlight - self.min_backlight) * ((2 - x) * x).pow(2)) as i32
+        let x = (v - self.min_illuminance) as f32 / (self.max_illuminance - self.min_illuminance) as f32;
+        (self.min_backlight as f32 + (self.max_backlight - self.min_backlight) as f32 * ((2f32 - x) * x).sqrt()) as i32
     }
 }
 
