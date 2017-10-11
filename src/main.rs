@@ -49,8 +49,6 @@ impl Configuration {
 
     fn set(&mut self, value: u8) {
         self.backlight.set(value);
-        // hack
-        let _ = self.backlight.get();
     }
 
     fn get(&mut self) -> i32 {

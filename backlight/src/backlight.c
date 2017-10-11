@@ -47,6 +47,7 @@ int32_t backlight_get() {
 void backlight_set(int32_t value) {
     xcb_randr_change_output_property (conn, output, backlight, XCB_ATOM_INTEGER,
                                       32, XCB_PROP_MODE_REPLACE, 1, (unsigned char *)&value);
+    xcb_flush(conn);
 }
 
 int backlight_init() {
