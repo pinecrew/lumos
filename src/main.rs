@@ -5,9 +5,10 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::{thread, time};
 use std::io::SeekFrom;
+use std::fs::create_dir_all;
 use std::cmp;
 use std::env;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use tini::Ini;
 use backlight::Backlight;
 
@@ -91,12 +92,27 @@ impl Transform {
     }
 }
 
+fn create_default_config() -> Ini {
+    Ini::new()
+    .section("illuminance")
+        .item("file", "/sys/bus/acpi/devices/ACPI0008:00/iio:device0/in_illuminance_raw")
+        .item("i2b", "-5,20,300,700,1100,7100")
+    .section("transition")
+        .item("step", "50")
+        .item("sleep", "100")
+}
+
 fn main() {
+    let default_config = create_default_config();
+    let user_home = env::var("HOME").unwrap();
     let user_path = match env::var("XDG_CONFIG_HOME") {
         Ok(path) => Path::new(&path).join("lumos/config.ini"),
-        Err(_) => PathBuf::from("./config.ini")
+        Err(_) => Path::new(&user_home).join(".config/lumos/config.ini"),
     };
-    println!("user_path = {:?}", user_path);
+    if !user_path.exists() {
+        create_dir_all(user_path.parent().unwrap()).unwrap();
+        default_config.to_file(&user_path).unwrap();
+    }
     let config = Ini::from_file(&user_path).unwrap();
     let backlight = Backlight::new();
     let mut illuminance = Illuminance::from_config(&config);
@@ -107,7 +123,6 @@ fn main() {
         let start = end;
         end = transform.to_backlight(illuminance.get());
         let mut steps = cmp::min(30, ((end - start).abs() * 100f32 ) as i32);
-        println!("steps = {}", steps);
         if steps > 0 {
             steps += 5;
             for i in 0..steps + 1 {
