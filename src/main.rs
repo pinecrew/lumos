@@ -8,6 +8,14 @@ use std::io::SeekFrom;
 use std::cmp;
 use tini::Ini;
 
+extern { 
+    fn init() -> i32;
+    fn backlight_get() -> i32; 
+    fn backlight_set(value: i32);
+    fn backlight_min() -> i32; 
+    fn backlight_max() -> i32; 
+}
+
 #[derive(Debug)]
 struct Configuration {
     max_backlight: i32,
