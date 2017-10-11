@@ -6,6 +6,8 @@ use std::io::prelude::*;
 use std::{thread, time};
 use std::io::SeekFrom;
 use std::cmp;
+use std::env;
+use std::path::{Path, PathBuf};
 use tini::Ini;
 use backlight::Backlight;
 
@@ -74,6 +76,7 @@ impl Transform {
         for (n, i) in self.i2b.iter().enumerate() {
             if value < *i {
                 r = n;
+                break;
             }
         }
         if r == 0 {
@@ -89,7 +92,12 @@ impl Transform {
 }
 
 fn main() {
-    let config = Ini::from_file("config.ini").unwrap();
+    let user_path = match env::var("XDG_CONFIG_HOME") {
+        Ok(path) => Path::new(&path).join("lumos/config.ini"),
+        Err(_) => PathBuf::from("./config.ini")
+    };
+    println!("user_path = {:?}", user_path);
+    let config = Ini::from_file(&user_path).unwrap();
     let backlight = Backlight::new();
     let mut illuminance = Illuminance::from_config(&config);
     let transform = Transform::from_config(&config);
