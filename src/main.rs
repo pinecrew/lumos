@@ -99,7 +99,7 @@ fn create_default_config() -> Ini {
         .item("i2b", "-5,20,300,700,1100,7100")
     .section("transition")
         .item("step", "50")
-        .item("sleep", "100")
+        .item("sleep", "1000")
 }
 
 fn main() {
