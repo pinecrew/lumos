@@ -1,28 +1,21 @@
 extern crate tini;
+extern crate backlight;
 
 use std::fs::File;
-use std::fs::OpenOptions;
 use std::io::prelude::*;
 use std::{thread, time};
 use std::io::SeekFrom;
 use std::cmp;
 use tini::Ini;
-
-extern { 
-    fn init() -> i32;
-    fn backlight_get() -> i32; 
-    fn backlight_set(value: i32);
-    fn backlight_min() -> i32; 
-    fn backlight_max() -> i32; 
-}
+use backlight::Backlight;
 
 #[derive(Debug)]
 struct Configuration {
-    max_backlight: i32,
-    min_backlight: i32,
+    max_backlight: u8,
+    min_backlight: u8,
     min_illuminance: i32,
     max_illuminance: i32,
-    backlight: File,
+    backlight: Backlight,
     illuminance: File,
     transition_step: time::Duration,
     transition_sleep: time::Duration,
@@ -32,25 +25,11 @@ impl Configuration {
     fn init(filename: &str) -> Configuration {
         let config = Ini::from_file(filename).unwrap();
 
-        let max_backlight = match config.get("backlight", "max") {
-            Some(-1) => {
-                let max_backlight_file: String = config.get("config", "max_backlight_file").unwrap();
-                let mut file = File::open(max_backlight_file).unwrap();
-                let mut buffer = String::new();
-                file.read_to_string(&mut buffer).ok();
-                buffer.trim_right().parse::<i32>().unwrap()
-            }
-            Some(value) => value,
-            None => panic!("ахтунг!")
-        };
+        let max_backlight = config.get("backlight", "max").unwrap();
         let min_backlight = config.get("backlight", "min").unwrap();
         let max_illuminance = config.get("illuminance", "max").unwrap();
         let min_illuminance = config.get("illuminance", "min").unwrap();
-        let backlight_file: String = config.get("config", "backlight_file").unwrap();
-        let backlight = OpenOptions::new()
-                                    .write(true)
-                                    .open(backlight_file)
-                                    .unwrap();
+        let backlight = Backlight::init();
         let illuminance_file: String = config.get("config", "illuminance_file").unwrap();
         let illuminance = File::open(illuminance_file).unwrap();
         let transition_step = time::Duration::from_millis(config.get("transition", "step").unwrap());
@@ -68,11 +47,10 @@ impl Configuration {
         }
     }
 
-    fn set(&mut self, value: i32) {
-        if value >= self.min_backlight && value <= self.max_backlight as i32 {
-            self.backlight.seek(SeekFrom::Start(0)).ok();
-            write!(self.backlight, "{}", value).ok();
-        }
+    fn set(&mut self, value: u8) {
+        self.backlight.set(value);
+        // hack
+        let _ = self.backlight.get();
     }
 
     fn get(&mut self) -> i32 {
@@ -85,9 +63,9 @@ impl Configuration {
         }
     }
 
-    fn lumos_to_backlight(&self, v: i32) -> i32 {
+    fn lumos_to_backlight(&self, v: i32) -> u8 {
         let x = (v - self.min_illuminance) as f32 / (self.max_illuminance - self.min_illuminance) as f32;
-        (self.min_backlight as f32 + (self.max_backlight - self.min_backlight) as f32 * ((2f32 - x) * x).sqrt()) as i32
+        (self.min_backlight as f32 + (self.max_backlight - self.min_backlight) as f32 * ((2f32 - x) * x).sqrt()) as u8
     }
 }
 

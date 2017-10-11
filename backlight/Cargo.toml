@@ -1,9 +1,8 @@
 [package]
-name = "lumos"
+name = "backlight"
 version = "0.1.0"
 authors = ["Alexey Golubev <dr.freecx@gmail.com>",
            "Vova Abdrakhmanov <369565@gmail.com>"]
+build = "build.rs"
 
 [dependencies]
-tini = "0.2"
-backlight = { path = "backlight" }

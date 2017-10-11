@@ -14,10 +14,10 @@ static xcb_atom_t backlight;
 static int32_t min;
 static int32_t max;
 
-static int32_t backlight_min() { return min; }
-static int32_t backlight_max() { return max; }
+int32_t backlight_min() { return min; }
+int32_t backlight_max() { return max; }
 
-static int32_t backlight_get() {
+int32_t backlight_get() {
     xcb_generic_error_t *error;
     xcb_randr_get_output_property_reply_t *prop_reply = NULL;
     xcb_randr_get_output_property_cookie_t prop_cookie;
@@ -44,12 +44,12 @@ static int32_t backlight_get() {
     return value;
 }
 
-static void backlight_set(int32_t value) {
+void backlight_set(int32_t value) {
     xcb_randr_change_output_property (conn, output, backlight, XCB_ATOM_INTEGER,
                                       32, XCB_PROP_MODE_REPLACE, 1, (unsigned char *)&value);
 }
 
-static int backlight_init() {
+int backlight_init() {
     xcb_generic_error_t *error;
 
     conn = xcb_connect (NULL, NULL);
