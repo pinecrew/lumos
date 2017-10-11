@@ -1,5 +1,5 @@
 extern { 
-    fn backlight_init();
+    fn backlight_init() -> i32;
     fn backlight_get() -> i32; 
     fn backlight_set(value: i32);
     fn backlight_max() -> i32;
@@ -14,7 +14,10 @@ pub struct Backlight {
 
 impl Backlight {
     pub fn init() -> Backlight {
-        unsafe { backlight_init(); }
+        let status = unsafe { backlight_init() };
+        if status < 0 {
+            panic!("something went wrong");
+        }
         let b_max = unsafe { backlight_max() } as u16;
         let b_min = unsafe { backlight_min() } as u16;
         Backlight {
