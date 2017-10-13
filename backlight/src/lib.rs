@@ -16,10 +16,10 @@ impl Backlight {
     pub fn new() -> Backlight {
         let status = unsafe { backlight_init() };
         if status < 0 {
-            panic!("something went wrong");
+            panic!("something went wrong, code `{}`", status);
         }
-        let max = unsafe { backlight_max() } as i32;
-        let min = unsafe { backlight_min() } as i32;
+        let max = unsafe { backlight_max() };
+        let min = unsafe { backlight_min() };
         Backlight {
             min, max
         }
