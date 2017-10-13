@@ -38,23 +38,58 @@ impl Illuminance {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 struct Transition {
     step: time::Duration,
     sleep: time::Duration,
+    start: f32,
+    end: f32,
+    steps: i32,
+    cur: i32,
 }
 
 impl Transition {
     fn from_config(config: &Ini) -> Transition {
         let step = time::Duration::from_millis(config.get("transition", "step").unwrap());
         let sleep = time::Duration::from_millis(config.get("transition", "sleep").unwrap());
+        let start = 0f32;
+        let end = 0f32;
+        let steps = 0i32;
+        let cur = 0i32;
         Transition {
             step,
             sleep,
+            start,
+            end,
+            steps,
+            cur,
         }
     }
-    pub fn f(&self, x: f32, center: f32, range: f32) -> f32 {
+    fn f(&self, x: f32, center: f32, range: f32) -> f32 {
         1.0 / ((15.0 * (x - center) / range).exp() + 1.0)
+    }
+
+    pub fn set(&mut self, start: f32, end: f32) {
+        self.start = start;
+        self.end = end;
+        self.steps = if (self.end - self.start).abs() > 0.1 {
+                cmp::min(30, ((self.end - self.start).abs() * 100f32 ) as i32)
+            } else { 0i32 };
+        self.cur = 0i32;
+    }
+}
+
+impl Iterator for Transition {
+    type Item = f32;
+    fn next(&mut self) -> Option<f32> {
+        if self.cur == self.steps {
+            thread::sleep(self.sleep);
+            return None
+        }
+        thread::sleep(self.step);
+        let v = ((self.start - self.end) * self.f(self.cur as f32, self.steps as f32 / 2.0, self.steps as f32)) + self.end;
+        self.cur += 1;
+        Some(v)
     }
 }
 
@@ -117,22 +152,11 @@ fn main() {
     let backlight = Backlight::new();
     let mut illuminance = Illuminance::from_config(&config);
     let transform = Transform::from_config(&config);
-    let transition = Transition::from_config(&config);
-    let mut end = backlight.get();
+    let mut transition = Transition::from_config(&config);
     loop {
-        let start = end;
-        end = transform.to_backlight(illuminance.get());
-        let mut steps = cmp::min(30, ((end - start).abs() * 100f32 ) as i32);
-        if steps > 0 {
-            steps += 5;
-            for i in 0..steps + 1 {
-                let v = ((start - end) * transition.f(i as f32, steps as f32 / 2.0, steps as f32)) + end;
-                backlight.set(v);
-                thread::sleep(transition.step);
-            }
-        } else {
-            backlight.set(end);
+        transition.set(backlight.get(), transform.to_backlight(illuminance.get()));
+        for v in transition {
+            backlight.set(v);
         }
-        thread::sleep(transition.sleep);
     }
 }
