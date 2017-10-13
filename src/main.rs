@@ -63,8 +63,15 @@ impl Transition {
             cur,
         }
     }
-    fn f(&self, x: f32, center: f32, range: f32) -> f32 {
-        1.0 / ((15.0 * (x - center) / range).exp() + 1.0)
+
+    /// Transition function. f(0) = 0, f(1) = 1
+    fn f(x: f32) -> f32 {
+        1.0 / ((-15.0 * (x - 0.5)).exp() + 1.0)
+    }
+
+    /// Current progress of transition
+    fn progress(&self) -> f32 {
+        Transition::f(self.cur as f32 / self.steps as f32)
     }
 
     pub fn set(&mut self, start: f32, end: f32) {
@@ -82,14 +89,12 @@ impl Transition {
 impl Iterator for Transition {
     type Item = f32;
     fn next(&mut self) -> Option<f32> {
-        if self.cur == self.steps {
+        if self.cur == self.steps - 1 {
             thread::sleep(self.sleep);
             return None;
         }
         thread::sleep(self.step);
-        let v = ((self.start - self.end) *
-                     self.f(self.cur as f32, self.steps as f32 / 2.0, self.steps as f32)) +
-            self.end;
+        let v = self.start + (self.end - self.start) * self.progress();
         self.cur += 1;
         Some(v)
     }
