@@ -24,12 +24,13 @@ impl Backlight {
             min, max
         }
     }
-
+    /// Get current backlight. Returns value in range [0, 1]
     pub fn get(&self) -> f32 {
         let b_cur = unsafe { backlight_get() };
         (b_cur - self.min) as f32 / (self.max - self.min) as f32
     }
 
+    /// Set backlight. Value should be in range [0, 1]
     pub fn set(&self, value: f32) {
         let set_value = (value * (self.max - self.min) as f32) as i32;
         unsafe { backlight_set(set_value); }

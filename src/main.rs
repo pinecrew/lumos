@@ -22,9 +22,7 @@ impl Illuminance {
     fn from_config(config: &Ini) -> Illuminance {
         let filename: String = config.get("illuminance", "file").unwrap();
         let file = File::open(filename).unwrap();
-        Illuminance {
-            file,
-        }
+        Illuminance { file }
     }
 
     fn get(&mut self) -> i32 {
@@ -33,7 +31,7 @@ impl Illuminance {
         self.file.read_to_string(&mut buffer).ok();
         match buffer.trim().parse::<i32>() {
             Ok(value) => value,
-            Err(_) => panic!("can't parse `{}` value", buffer)
+            Err(_) => panic!("can't parse `{}` value", buffer),
         }
     }
 }
@@ -73,8 +71,10 @@ impl Transition {
         self.start = start;
         self.end = end;
         self.steps = if (self.end - self.start).abs() > 0.1 {
-                cmp::min(30, ((self.end - self.start).abs() * 100f32 ) as i32)
-            } else { 0i32 };
+            cmp::min(30, ((self.end - self.start).abs() * 100f32) as i32)
+        } else {
+            0i32
+        };
         self.cur = 0i32;
     }
 }
@@ -84,10 +84,12 @@ impl Iterator for Transition {
     fn next(&mut self) -> Option<f32> {
         if self.cur == self.steps {
             thread::sleep(self.sleep);
-            return None
+            return None;
         }
         thread::sleep(self.step);
-        let v = ((self.start - self.end) * self.f(self.cur as f32, self.steps as f32 / 2.0, self.steps as f32)) + self.end;
+        let v = ((self.start - self.end) *
+                     self.f(self.cur as f32, self.steps as f32 / 2.0, self.steps as f32)) +
+            self.end;
         self.cur += 1;
         Some(v)
     }
@@ -100,9 +102,7 @@ struct Transform {
 impl Transform {
     fn from_config(config: &Ini) -> Transform {
         let i2b: Vec<i32> = config.get_vec("illuminance", "i2b").unwrap();
-        Transform {
-            i2b,
-        }
+        Transform { i2b }
     }
 
     pub fn to_backlight(&self, value: i32) -> f32 {
@@ -120,19 +120,21 @@ impl Transform {
         } else if r > last {
             1f32
         } else {
-            (r as f32 +
-               (value - self.i2b[r]) as f32 /
-               (self.i2b[r] - self.i2b[r-1]) as f32) * step
+            (r as f32 + (value - self.i2b[r]) as f32 / (self.i2b[r] - self.i2b[r - 1]) as f32) *
+                step
         }
     }
 }
 
 fn create_default_config() -> Ini {
     Ini::new()
-    .section("illuminance")
-        .item("file", "/sys/bus/acpi/devices/ACPI0008:00/iio:device0/in_illuminance_raw")
+        .section("illuminance")
+        .item(
+            "file",
+            "/sys/bus/acpi/devices/ACPI0008:00/iio:device0/in_illuminance_raw",
+        )
         .item("i2b", "-5,20,300,700,1100,7100")
-    .section("transition")
+        .section("transition")
         .item("step", "50")
         .item("sleep", "1000")
 }
