@@ -89,7 +89,7 @@ impl Transition {
 impl Iterator for Transition {
     type Item = f32;
     fn next(&mut self) -> Option<f32> {
-        if self.cur == self.steps - 1 {
+        if self.cur >= self.steps - 1 {
             thread::sleep(self.sleep);
             return None;
         }
