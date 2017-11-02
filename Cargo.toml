@@ -7,3 +7,10 @@ authors = ["Alexey Golubev <dr.freecx@gmail.com>",
 [dependencies]
 tini = "0.2"
 backlight = { path = "backlight" }
+
+# for logger
+# log = "0.3"
+# 
+# for keylogger
+# glob = "*"
+# libc = "*"
