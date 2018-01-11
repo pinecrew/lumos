@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=Lumos
+Comment=Adjust brightness to ambient light illuminance
+Exec=sh -c "$HOME/.cargo/bin/lumos"
+Icon=display-brightness
+Type=Application
+Categories=System
