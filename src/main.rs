@@ -161,7 +161,13 @@ fn main() {
     let transform = Transform::from_config(&config);
     let mut transition = Transition::from_config(&config);
     loop {
-        transition.set(backlight.get(), transform.to_backlight(illuminance.get()));
+        // dirty hack for avoid blinking
+        let mut value = illuminance.get();
+        if value == 0 {
+            // maybe sleep here?
+            value = illuminance.get();
+        }
+        transition.set(backlight.get(), transform.to_backlight(value));
         for v in transition {
             backlight.set(v);
         }
