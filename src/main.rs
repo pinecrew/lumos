@@ -156,10 +156,10 @@ fn create_default_config() -> Ini {
 fn main() {
     // ignore multiple copy of app
     if Path::new(LUMOS_LOCK).exists() {
-        println!("[!] Lumos is already run!");
-        println!("  - you can't run more than one copy of app");
         println!(
-            "  - maybe last session was ended incorrectly (remove {})",
+            "[!] Lumos is already run!\n\
+            - you can't run more than one copy of lumos\n\
+            - maybe last session was ended incorrectly (remove {})",
             LUMOS_LOCK
         );
         process::exit(0);
@@ -191,7 +191,11 @@ fn main() {
     }
 
     // debug log
-    let mut log = OpenOptions::new().append(true).create(true).open("/tmp/lumos.log").unwrap();
+    let mut log = OpenOptions::new()
+        .append(true)
+        .create(true)
+        .open("/tmp/lumos.log")
+        .unwrap();
 
     // load config
     let config = Ini::from_file(&user_path).unwrap();
