@@ -1,7 +1,8 @@
-extern crate tini;
 extern crate backlight;
+extern crate tini;
 
-use std::fs::File;
+use std::fs::OpenOptions;
+use std::fs::{remove_file, File};
 use std::io::prelude::*;
 use std::{thread, time};
 use std::io::SeekFrom;
@@ -9,14 +10,26 @@ use std::fs::create_dir_all;
 use std::cmp;
 use std::env;
 use std::path::Path;
+use std::process;
 use tini::Ini;
 use backlight::Backlight;
+
+const LUMOS_LOCK: &'static str = "/tmp/lumos.lock";
+
+extern "C" {
+    fn signal(sig: u32, cb: extern "C" fn(u32)) -> extern "C" fn(u32);
+}
+
+extern "C" fn interrupt(signal: u32) {
+    println!("[!] Lumos interrupted by signal {}!", signal);
+    remove_file(LUMOS_LOCK).unwrap();
+    process::exit(0);
+}
 
 #[derive(Debug)]
 struct Illuminance {
     file: File,
 }
-
 
 impl Illuminance {
     fn from_config(config: &Ini) -> Illuminance {
@@ -27,8 +40,8 @@ impl Illuminance {
 
     fn get(&mut self) -> i32 {
         let mut buffer = String::new();
-        self.file.seek(SeekFrom::Start(0)).ok();
-        self.file.read_to_string(&mut buffer).ok();
+        self.file.seek(SeekFrom::Start(0)).unwrap();
+        self.file.read_to_string(&mut buffer).unwrap();
         match buffer.trim().parse::<i32>() {
             Ok(value) => value,
             Err(_) => panic!("can't parse `{}` value", buffer),
@@ -50,17 +63,13 @@ impl Transition {
     fn from_config(config: &Ini) -> Transition {
         let step = time::Duration::from_millis(config.get("transition", "step").unwrap());
         let sleep = time::Duration::from_millis(config.get("transition", "sleep").unwrap());
-        let start = 0f32;
-        let end = 0f32;
-        let steps = 0i32;
-        let cur = 0i32;
         Transition {
             step,
             sleep,
-            start,
-            end,
-            steps,
-            cur,
+            start: 0_f32,
+            end: 0_f32,
+            steps: 0_i32,
+            cur: 0_i32,
         }
     }
 
@@ -125,8 +134,8 @@ impl Transform {
         } else if r > last {
             1f32
         } else {
-            (r as f32 + (value - self.i2b[r]) as f32 / (self.i2b[r] - self.i2b[r - 1]) as f32) *
-                step
+            (r as f32 + (value - self.i2b[r]) as f32 / (self.i2b[r] - self.i2b[r - 1]) as f32)
+                * step
         }
     }
 }
@@ -145,17 +154,50 @@ fn create_default_config() -> Ini {
 }
 
 fn main() {
-    let default_config = create_default_config();
+    // ignore multiple copy of app
+    if Path::new(LUMOS_LOCK).exists() {
+        println!("[!] Lumos is already run!");
+        println!("  - you can't run more than one copy of app");
+        println!(
+            "  - maybe last session was ended incorrectly (remove {})",
+            LUMOS_LOCK
+        );
+        process::exit(0);
+    }
+    // create lock file
+    let _ = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(LUMOS_LOCK)
+        .unwrap();
+    // interrupt signals
+    unsafe {
+        signal(1, interrupt);
+        signal(2, interrupt);
+        signal(9, interrupt);
+        signal(15, interrupt);
+    }
+
+    // user configs
     let user_home = env::var("HOME").unwrap();
     let user_path = match env::var("XDG_CONFIG_HOME") {
         Ok(path) => Path::new(&path).join("lumos/config.ini"),
         Err(_) => Path::new(&user_home).join(".config/lumos/config.ini"),
     };
     if !user_path.exists() {
+        let default_config = create_default_config();
         create_dir_all(user_path.parent().unwrap()).unwrap();
         default_config.to_file(&user_path).unwrap();
     }
+
+    // debug log
+    let mut log = OpenOptions::new().append(true).create(true).open("/tmp/lumos.log").unwrap();
+
+    // load config
     let config = Ini::from_file(&user_path).unwrap();
+    let blinking_flag: bool = config.get("debug", "fix_blinking").unwrap_or(false);
+    let debug_log: bool = config.get("debug", "log").unwrap_or(false);
+
     let backlight = Backlight::new();
     let mut illuminance = Illuminance::from_config(&config);
     let transform = Transform::from_config(&config);
@@ -170,6 +212,12 @@ fn main() {
         transition.set(backlight.get(), transform.to_backlight(value));
         for v in transition {
             backlight.set(v);
+        }
+        if blinking_flag {
+            thread::sleep(time::Duration::from_millis(50));
+        }
+        if debug_log {
+            write!(log, "{} ", value).ok();
         }
     }
 }
